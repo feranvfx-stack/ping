@@ -140,6 +140,9 @@ create policy "Authenticated users can read profiles" on public.profiles
 create policy "Users update their own profile" on public.profiles
   for update using (auth.uid() = id);
 
+drop policy if exists "Participants read conversations" on public.conversations;
+drop policy if exists "Authenticated users create conversations" on public.conversations;
+drop policy if exists "Users can insert their own conversation membership" on public.conversations;
 create policy "Participants read conversations" on public.conversations
   for select using (
     exists (
@@ -151,10 +154,9 @@ create policy "Participants read conversations" on public.conversations
   );
 create policy "Authenticated users create conversations" on public.conversations
   for insert with check (auth.role() = 'authenticated');
-create policy "Users can insert their own conversation membership" on public.conversations
-  for insert with check (true);
 
 drop policy if exists "Participants read participant rows" on public.conversation_participants;
+drop policy if exists "Authenticated users add participants" on public.conversation_participants;
 create policy "Participants read participant rows" on public.conversation_participants
   for select using (user_id = auth.uid());
 create policy "Authenticated users add participants" on public.conversation_participants

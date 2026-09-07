@@ -25,7 +25,51 @@ export default function AppShell({ auth }) {
     document.documentElement.dataset.wallpaper = localStorage.getItem('ping_wallpaper') || 'paper'
     document.documentElement.dataset.fontSize = localStorage.getItem('ping_font_size') || 'comfortable'
   }, [])
-  useEffect(() => { if (!supabase || !auth.user?.id) return undefined; supabase.from('statuses').select('*, profiles(display_name, avatar_url)').order('created_at', { ascending: false }).then(({ data }) => setStatuses(data || [])); const channel = supabase.channel('status-feed').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'statuses' }, ({ new: next }) => setStatuses((current) => [next, ...current.filter((item) => item.id !== next.id)])).subscribe(); return () => { supabase.removeChannel(channel) } }, [auth.user?.id])
+  useEffect(() => {
+    if (!supabase || !auth.user?.id) return undefined
+
+    async function loadStatuses() {
+      const { data: myRows } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', auth.user.id)
+
+      const conversationIds = (myRows || []).map((row) => row.conversation_id)
+      if (!conversationIds.length) {
+        setStatuses([])
+        return
+      }
+
+      const { data: contactRows } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .in('conversation_id', conversationIds)
+        .neq('user_id', auth.user.id)
+
+      const contactIds = [...new Set((contactRows || []).map((row) => row.user_id))]
+      if (!contactIds.length) {
+        setStatuses([])
+        return
+      }
+
+      const { data } = await supabase
+        .from('statuses')
+        .select('*, profiles(display_name, avatar_url)')
+        .in('author_id', contactIds)
+        .order('created_at', { ascending: false })
+
+      setStatuses(data || [])
+    }
+
+    loadStatuses()
+
+    const channel = supabase
+      .channel('status-feed')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'statuses' }, () => loadStatuses())
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [auth.user?.id])
 
   async function openConversation(userId) {
     const id = await startConversation(userId)
