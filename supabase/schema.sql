@@ -69,7 +69,6 @@ begin
   )
   on conflict (id) do update set
     email = excluded.email,
-    bio = coalesce(excluded.bio, profiles.bio),
     display_name = coalesce(excluded.display_name, profiles.display_name),
     avatar_url = coalesce(excluded.avatar_url, profiles.avatar_url);
   return new;
@@ -89,6 +88,19 @@ as $$
 declare
   code_owner uuid;
 begin
+  insert into public.profiles (id, email, display_name, avatar_url)
+  select
+    id,
+    email,
+    raw_user_meta_data ->> 'full_name',
+    raw_user_meta_data ->> 'avatar_url'
+  from auth.users
+  where id = auth.uid()
+  on conflict (id) do update set
+    email = excluded.email,
+    display_name = coalesce(excluded.display_name, profiles.display_name),
+    avatar_url = coalesce(excluded.avatar_url, profiles.avatar_url);
+
   update public.connect_codes
   set used_at = now()
   where code = upper(trim(input_code))
