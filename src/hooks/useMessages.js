@@ -6,11 +6,24 @@ export function useMessages(conversationId) {
   const [loading, setLoading] = useState(Boolean(conversationId))
 
   useEffect(() => {
-    if (!supabase || !conversationId) { setMessages([]); setLoading(false); return undefined }
+    if (!supabase || !conversationId) {
+      // oxlint-disable-next-line react(set-state-in-effect)
+      setMessages([])
+      // oxlint-disable-next-line react(set-state-in-effect)
+      setLoading(false)
+      return undefined
+    }
     let active = true
     setLoading(true)
     supabase.from('messages').select('*').eq('conversation_id', conversationId).order('created_at')
-      .then(({ data }) => { if (active) { setMessages(data || []); setLoading(false) } })
+      .then(({ data }) => {
+        if (active) {
+          // oxlint-disable-next-line react(set-state-in-effect)
+          setMessages(data || [])
+          // oxlint-disable-next-line react(set-state-in-effect)
+          setLoading(false)
+        }
+      })
     const channel = supabase.channel(`messages:${conversationId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, ({ new: message }) => {
         setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message])

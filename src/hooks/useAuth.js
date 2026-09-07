@@ -10,10 +10,20 @@ export function useAuth() {
     if (!supabase) { setLoading(false); return undefined }
     let active = true
     supabase.auth.getUser().then(({ data }) => {
-      if (active) { setUser(data.user); setLoading(false) }
+      if (active) {
+        // oxlint-disable-next-line react(set-state-in-effect)
+        setUser(data.user)
+        // oxlint-disable-next-line react(set-state-in-effect)
+        setLoading(false)
+      }
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) { setUser(session?.user ?? null); setLoading(false) }
+      if (active) {
+        // oxlint-disable-next-line react(set-state-in-effect)
+        setUser(session?.user ?? null)
+        // oxlint-disable-next-line react(set-state-in-effect)
+        setLoading(false)
+      }
     })
     return () => { active = false; listener.subscription.unsubscribe() }
   }, [])

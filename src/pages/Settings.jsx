@@ -4,9 +4,11 @@ import { supabase } from '../lib/supabase'
 
 export default function Settings({ auth }) {
   const metadata = auth.user?.user_metadata || {}
-  const [name, setName] = useState(metadata.full_name || metadata.name || '')
+  const initialName = metadata.full_name || metadata.name || ''
+  const initialAvatar = metadata.avatar_url || ''
+  const [name, setName] = useState(initialName)
   const [bio, setBio] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState(metadata.avatar_url || '')
+  const [avatarUrl, setAvatarUrl] = useState(initialAvatar)
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(true)
   const [preferences, setPreferences] = useState(() => ({
@@ -25,13 +27,13 @@ export default function Settings({ auth }) {
     let active = true
     supabase.from('profiles').select('display_name, bio, avatar_url').eq('id', auth.user.id).maybeSingle().then(({ data }) => {
       if (!active || !data) return
-      setName(data.display_name || metadata.full_name || metadata.name || '')
+      setName(data.display_name || initialName)
       setBio(data.bio || '')
-      setAvatarUrl(data.avatar_url || metadata.avatar_url || '')
+      setAvatarUrl(data.avatar_url || initialAvatar)
       setLoading(false)
     })
     return () => { active = false }
-  }, [auth.user.id])
+  }, [auth.user.id, initialAvatar, initialName])
 
   function updatePreference(key, value) {
     const next = { ...preferences, [key]: value }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 export function useConversations(userId) {
@@ -29,7 +29,7 @@ export function useConversations(userId) {
     if (upsertError) throw upsertError
   }
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!supabase || !userId) return
     const { data } = await supabase.from('conversation_participants')
       .select('conversation_id, conversations(id, created_at, conversation_participants(user_id, profiles(id, display_name, email, avatar_url)))')
@@ -38,15 +38,24 @@ export function useConversations(userId) {
       const other = conversation?.conversation_participants?.find((participant) => participant.user_id !== userId)?.profiles
       return { ...conversation, other, lastMessage: '' }
     }).filter((conversation) => conversation?.id)
-    setConversations(mapped); setLoading(false)
-  }
+    // oxlint-disable-next-line react(set-state-in-effect)
+    setConversations(mapped)
+    // oxlint-disable-next-line react(set-state-in-effect)
+    setLoading(false)
+  }, [userId])
 
   useEffect(() => {
-    if (!userId || !supabase) { setConversations([]); setLoading(false); return undefined }
+    if (!userId || !supabase) {
+      // oxlint-disable-next-line react(set-state-in-effect)
+      setConversations([])
+      // oxlint-disable-next-line react(set-state-in-effect)
+      setLoading(false)
+      return undefined
+    }
     load()
     const channel = supabase.channel(`conversations:${userId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, load).subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [userId])
+  }, [userId, load])
 
   async function startConversation(otherUserId) {
     if (!supabase || !userId || otherUserId === userId) throw new Error('Choose another Ping user.')

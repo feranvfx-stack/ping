@@ -1,5 +1,16 @@
 create extension if not exists pgcrypto;
 
+-- Re-run safe reset: if the app tables already exist, wipe and recreate them so the SQL can be re-applied without manual deletion.
+drop trigger if exists on_auth_user_created on auth.users;
+drop function if exists public.redeem_connect_code(text) cascade;
+drop function if exists public.handle_new_user() cascade;
+drop table if exists public.statuses cascade;
+drop table if exists public.connect_codes cascade;
+drop table if exists public.messages cascade;
+drop table if exists public.conversation_participants cascade;
+drop table if exists public.conversations cascade;
+drop table if exists public.profiles cascade;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
@@ -137,23 +148,16 @@ create policy "Participants read conversations" on public.conversations
 create policy "Authenticated users create conversations" on public.conversations
   for insert with check (auth.role() = 'authenticated');
 
+drop policy if exists "Participants read participant rows" on public.conversation_participants;
 create policy "Participants read participant rows" on public.conversation_participants
-  for select using (
-    user_id = auth.uid()
-    or exists (
-      select 1
-      from public.conversation_participants cp
-      where cp.conversation_id = conversation_participants.conversation_id
-        and cp.user_id = auth.uid()
-    )
-  );
+  for select using (user_id = auth.uid());
 create policy "Authenticated users add participants" on public.conversation_participants
   for insert with check (auth.role() = 'authenticated');
 
 create policy "Participants read messages" on public.messages
   for select using (exists (
-    select 1 from public.conversation_participants cp
-    where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()
+  select 1 from public.conversation_participants cp
+  where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()
   ));
 create policy "Participants send messages" on public.messages
   for insert with check (
