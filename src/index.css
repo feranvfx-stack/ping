@@ -28,7 +28,8 @@ body {
     background: var(--bg);
     color: var(--ink);
     font-family: var(--sans);
-    overflow: hidden
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body:has(.simple-page) {

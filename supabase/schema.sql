@@ -138,11 +138,15 @@ create policy "Authenticated users create conversations" on public.conversations
   for insert with check (auth.role() = 'authenticated');
 
 create policy "Participants read participant rows" on public.conversation_participants
-  for select using (exists (
-    select 1 from public.conversation_participants cp
-    where cp.conversation_id = conversation_participants.conversation_id
-      and cp.user_id = auth.uid()
-  ));
+  for select using (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.conversation_participants cp
+      where cp.conversation_id = conversation_participants.conversation_id
+        and cp.user_id = auth.uid()
+    )
+  );
 create policy "Authenticated users add participants" on public.conversation_participants
   for insert with check (auth.role() = 'authenticated');
 
