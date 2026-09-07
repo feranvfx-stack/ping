@@ -1,0 +1,1 @@
+export default function Terms() { return <main className="simple-page"><div className="simple-content"><p className="eyebrow">Ping</p><h1>Terms</h1><p className="legal-copy">These draft terms describe a private communication tool. Replace this page with reviewed terms, retention details, and support contact information before accepting public users.</p></div></main> }

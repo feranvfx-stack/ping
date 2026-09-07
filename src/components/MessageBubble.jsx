@@ -1,0 +1,2 @@
+import VoiceMessagePlayer from './VoiceMessagePlayer'
+export default function MessageBubble({ message, mine }) { return <div className={`message-row ${mine ? 'mine' : ''}`}><div className="message-bubble">{message.type === 'voice' ? <VoiceMessagePlayer src={message.audio_url} duration={message.duration_seconds} mine={mine} /> : <p>{message.content}</p>}<time>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time></div></div> }

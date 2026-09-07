@@ -1,0 +1,1 @@
+export default function PresenceDot({ online }) { return <span className={`presence-dot ${online ? 'online' : ''}`} aria-label={online ? 'Online' : 'Offline'} /> }

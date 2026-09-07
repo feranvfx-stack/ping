@@ -1,0 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
+export default function VoiceRecorderButton({ onComplete }) {
+  const [recording, setRecording] = useState(false); const [seconds, setSeconds] = useState(0); const recorder = useRef(null); const chunks = useRef([]); const started = useRef(0)
+  useEffect(() => { if (!recording) return undefined; const timer = setInterval(() => { const elapsed = Math.floor((Date.now() - started.current) / 1000); setSeconds(elapsed); if (elapsed >= 60) stop() }, 250); return () => clearInterval(timer) }, [recording])
+  async function start() { if (!navigator.mediaDevices || !window.MediaRecorder) return; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); chunks.current = []; const instance = new MediaRecorder(stream); recorder.current = instance; started.current = Date.now(); instance.ondataavailable = (event) => event.data.size && chunks.current.push(event.data); instance.onstop = () => { const blob = new Blob(chunks.current, { type: instance.mimeType }); stream.getTracks().forEach((track) => track.stop()); onComplete(blob, Math.min(60, Math.floor((Date.now() - started.current) / 1000))) }; instance.start(); setSeconds(0); setRecording(true) }
+  function stop() { if (recorder.current?.state === 'recording') { recorder.current.stop(); setRecording(false) } }
+  return <button type="button" className={`record-button ${recording ? 'recording' : ''}`} onClick={recording ? stop : start} title={recording ? `Stop recording (${seconds}s)` : 'Record voice note'}>{recording ? `${seconds}s` : '◉'}</button>
+}
