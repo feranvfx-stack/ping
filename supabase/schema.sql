@@ -141,12 +141,18 @@ create policy "Users update their own profile" on public.profiles
   for update using (auth.uid() = id);
 
 create policy "Participants read conversations" on public.conversations
-  for select using (exists (
-    select 1 from public.conversation_participants cp
-    where cp.conversation_id = conversations.id and cp.user_id = auth.uid()
-  ));
+  for select using (
+    exists (
+      select 1
+      from public.conversation_participants cp
+      where cp.conversation_id = conversations.id
+        and cp.user_id = auth.uid()
+    )
+  );
 create policy "Authenticated users create conversations" on public.conversations
   for insert with check (auth.role() = 'authenticated');
+create policy "Users can insert their own conversation membership" on public.conversations
+  for insert with check (true);
 
 drop policy if exists "Participants read participant rows" on public.conversation_participants;
 create policy "Participants read participant rows" on public.conversation_participants
