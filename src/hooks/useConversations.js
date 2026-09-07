@@ -5,6 +5,30 @@ export function useConversations(userId) {
   const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(Boolean(userId))
 
+  async function ensureProfileExists() {
+    if (!supabase || !userId) return
+    const { data: currentUser, error: userError } = await supabase.auth.getUser()
+    if (userError || !currentUser.user) throw userError || new Error('You are not signed in.')
+
+    const { data: profile, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', currentUser.user.id)
+      .maybeSingle()
+
+    if (lookupError) throw lookupError
+    if (profile) return
+
+    const { error: upsertError } = await supabase.from('profiles').upsert({
+      id: currentUser.user.id,
+      email: currentUser.user.email,
+      display_name: currentUser.user.user_metadata?.full_name || currentUser.user.user_metadata?.name || currentUser.user.email?.split('@')[0],
+      avatar_url: currentUser.user.user_metadata?.avatar_url || null
+    }, { onConflict: 'id' })
+
+    if (upsertError) throw upsertError
+  }
+
   async function load() {
     if (!supabase || !userId) return
     const { data } = await supabase.from('conversation_participants')
@@ -26,6 +50,9 @@ export function useConversations(userId) {
 
   async function startConversation(otherUserId) {
     if (!supabase || !userId || otherUserId === userId) throw new Error('Choose another Ping user.')
+
+    await ensureProfileExists()
+
     const { data: existing } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', userId)
     for (const row of existing || []) {
       const { data: match } = await supabase.from('conversation_participants').select('user_id').eq('conversation_id', row.conversation_id).eq('user_id', otherUserId).maybeSingle()
